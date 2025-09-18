@@ -2,50 +2,56 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Auto Location Form</title>
+  <title>Auto Location Form Redirect</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-  <h2>Getting your location...</h2>
-  <p id="status"></p>
+  <h2>Getting your location…</h2>
+  <p id="status">Please allow location access when prompted.</p>
 
   <script>
+    const FORM_ID = "1FAIpQLSfZJFUT-5p49mOQ7atxxALLa2GoNWbsV-r6ag4uM-P5kdrs5A";
+    const ENTRY_LOCATION = "entry.1977838700";  // Location field
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    function redirectToFormWithLocation(lat, lng, accuracy) {
+      const locValue = `${lat},${lng} (±${accuracy}m)`;
+      const url = `https://docs.google.com/forms/d/e/${FORM_ID}/viewform?usp=pp_url&${ENTRY_LOCATION}=${encodeURIComponent(locValue)}`;
+      window.location.href = url;
+    }
+
     function getLocation() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(showPosition, showError);
-      } else {
-        document.getElementById("status").innerHTML = "Geolocation is not supported by this browser.";
+      if (!navigator.geolocation) {
+        setStatus("Geolocation is not supported by this browser.");
+        return;
       }
+      setStatus("Requesting location…");
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          setStatus("Location captured.");
+          redirectToFormWithLocation(latitude, longitude, accuracy);
+        },
+        err => {
+          console.error(err);
+          if (err.code === err.PERMISSION_DENIED) {
+            setStatus("Permission denied by user.");
+          } else if (err.code === err.POSITION_UNAVAILABLE) {
+            setStatus("Location unavailable.");
+          } else if (err.code === err.TIMEOUT) {
+            setStatus("Request timed out.");
+          } else {
+            setStatus("Error getting location: " + err.message);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      );
     }
 
-    function showPosition(position) {
-      let lat = position.coords.latitude;
-      let lng = position.coords.longitude;
-
-      // Replace entry.1781705563 with your "Location" field ID
-      let formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfZJFUT-5p49mOQ7atxxALLa2GoNWbsV-r6ag4uM-P5kdrs5A/viewform?usp=pp_url" 
-                  + "&entry.1977838700=Test" 
-                  + "&entry.1781705563=" + lat + "," + lng;
-
-      window.location.href = formUrl; // redirect user to form with location filled
-    }
-
-    function showError(error) {
-      switch(error.code) {
-        case error.PERMISSION_DENIED:
-          document.getElementById("status").innerHTML = "Permission denied by user.";
-          break;
-        case error.POSITION_UNAVAILABLE:
-          document.getElementById("status").innerHTML = "Location information is unavailable.";
-          break;
-        case error.TIMEOUT:
-          document.getElementById("status").innerHTML = "The request to get user location timed out.";
-          break;
-        case error.UNKNOWN_ERROR:
-          document.getElementById("status").innerHTML = "An unknown error occurred.";
-          break;
-      }
-    }
-
+    // Start immediately
     getLocation();
   </script>
 </body>
